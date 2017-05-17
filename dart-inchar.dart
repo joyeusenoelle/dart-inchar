@@ -11,6 +11,9 @@ import 'dart:mirrors';
 // Initialize global variables
 //
 
+String lb = "\n";
+String tb = "\t";
+
 Map types = {
               "angel":{
                 "cb":["Seraph","Cherub","Ofanite","Elohite","Malakite","Kyriotate","Mercurian"],
@@ -49,17 +52,51 @@ class Character {
 
   String cb;
   String word;
+  Map forces = {"Corporeal": 1, "Ethereal": 1, "Celestial": 1};
+  Map attributes = {"Corporeal": [1,1], "Ethereal": [1,1], "Celestial": [1,1]};
+  Map skills = {};
+  List attunements = [];
+  num cp = 36;
+  num fcs = 6;
 
   Character() {
     String typ = getRand(["angel","demon"]);
     cb = getRand(types[typ]["cb"]);
     word = getRand(types[typ]["words"]);
+    var i = 0;
+    while (i < fcs) {
+      i += addForce() ? 1 : 0;
+    }
+  }
+
+  bool addForce([String realm]) {
+    String realm;
+    if (!realm) {
+      realm = getRand(["Corporeal","Ethereal","Celestial"]);
+    }
+    if (forces[realm] == 6) {
+      return false;
+    } else {
+      forces[realm] += 1;
+      return true;
+    }
   }
 
 // If prt is True, print the output before returning it
   String output([bool prt]) {
     String out = "";
-    out += "${cb} of ${word}";
+    out += "$cb of $word";
+    out += "$lb${forces['Corporeal']} Corporeal$tb${forces['Ethereal']} Ethereal$tb${forces['Celestial']} Celestial";
+    out += "$lb${attributes['Corporeal'][0]} Strength$tb${attributes['Ethereal'][0]} Intellect$tb${attributes['Celestial'][0]} Will";
+    out += "$lb${attributes['Corporeal'][1]} Agility$tb${attributes['Ethereal'][1]} Precision$tb${attributes['Celestial'][1]} Perception";
+    out += "$lb${lb}Skills: ";
+    List skls = skills.keys;
+    List sklslist = [];
+    skls.forEach( (el) => sklslist.add("$el/${skills[el]}") );
+    sklslist.sort();
+    out += sklslist.join(", ");
+    out += "${lb}Attunements: " + attunements.join(", ");
+    out += "$lb$lb$cp character points remaining";
     if (prt) { print(out); }
     return out;
   }
