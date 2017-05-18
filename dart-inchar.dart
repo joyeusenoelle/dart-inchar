@@ -11,6 +11,8 @@ import 'dart:mirrors';
 // Initialize global variables
 //
 
+var rng = new Random();
+
 String lb = "\n";
 String tb = "\t";
 
@@ -40,8 +42,8 @@ List langlist = ["Mandarin","Spanish","English","Hindi","Arabic","Portuguese","B
 
 // Returns a random element from the supplied array
 List getRand(List ary) {
-  var aryrng = new Random();
-  return ary[aryrng.nextInt(ary.length)];
+  //var aryrng = new Random();
+  return ary[rng.nextInt(ary.length)];
 }
 
 // Parses command-line arguments
@@ -54,12 +56,33 @@ void argError(String err_text) {
   throw new ArgumentError("Argument error: $err_text");
 }
 
+// Generates a random name between 5 and 9 characters long
+// Picks randomly between a vowel and a consonant to start, then
+// alternates vowels with consonants
+String rName() {
+  var vowels = ["a","e","i","o","u","w","y"];
+  var consonants = ["b","c","d","f","g","h","j","k","l","m","n","p","q","r","s","t","v","w","x","z"];
+  var ln = rng.nextInt(5) + 4;
+  var nm = "";
+  var toggle = rng.nextInt(2) == 1 ? true : false;
+  for (var i = 0; i < ln; i++) {
+    if (toggle) {
+      nm += getRand(consonants);
+    } else {
+      nm += getRand(vowels);
+    }
+    toggle = !toggle;
+  }
+  return nm.replaceRange(0,1,nm[0].toUpperCase());
+}
+
 //
 // Define Character class
 //
 
 class Character {
 
+  String name;
   String cb;
   String word;
   Map forces = {"Corporeal": 1, "Ethereal": 1, "Celestial": 1};
@@ -68,37 +91,67 @@ class Character {
   List attunements = [];
   num fcs = 6;
   num maxcp;
-  num cp;
   num spent = 0;
 
   Character() {
-    var rng = new Random();
+    //var rng = new Random();
     String typ = getRand(["angel","demon"]);
     maxcp = (fcs + 3) * 4;
-    cp = maxcp;
+    name = rName();
     cb = getRand(types[typ]["cb"]);
     word = getRand(types[typ]["words"]);
-    attunements.add("${cb} of ${word}");
+    attunements.add("${cb} of ${word}"); // Everyone gets this for free
+    skills["Language (Local)"] = 3; // Everyone gets this for free
+    List sklselect = [];
     var i = 0;
     while (i < fcs) {
-      i += addForce() ? 1 : 0;
+      i += addForce() ? 1 : 0; // Add a Force to a random realm if Forces in that realm aren't already 6
     }
-    realmlist.forEach( (el) {
-      for (var j = 0; j < (forces[el] * 4) - 2; j++) {
-        addChar(el);
+    realmlist.forEach( (rlm) {
+      for (var j = 0; j < (forces[rlm] * 4) - 2; j++) {
+        addChar(rlm); // Add a point to one of the characteristics in each realm, max 12
+      }
+      for (var j = 0; j < forces[rlm]; j++) {
+        sklselect.add(rlm); // List of realms weighted by number of Forces
       }
     });
-    num skilldelta = (cp*0.33).floor() - 1;
-    num skillpoints = cp - (skilldelta + rng.nextInt((skilldelta*1.25).floor() - skilldelta));
+    // Number of character points available is roughly 2/3 the total allotment
+    // The generator can go over since it doesn't track until after spending, but not by much
+    num skilldelta = (maxcp*0.33).floor() - 1;
+    num skillpoints = maxcp - (skilldelta + rng.nextInt((skilldelta*1.25).floor() - skilldelta));
     while (spent < skillpoints) {
       num styp = rng.nextInt(15);
-      if (styp < 8) {
+      if (styp < 8) { // 0-8 assigns a skill
         // Skills
-        
-        spent += 1;
-      } else if (styp < 12) {
+        // Use the weighted list of realms to select skills
+        // This helps ensure skills tend to be usable by the character
+        String newskl = getRand(skillslist[getRand(sklselect)]);
+        // Seraphim and Balseraphs can't have Lying
+        if ((cb == "Seraph" || cb == "Balseraph") && newskl == "Lying") {
+          continue;
+        }
+        // Assign specializations
+        if (newskl == "Knowledge") {
+          newskl += " (" + getRand(knowlist) + ")";
+        } else if (newskl == "Area Knowledge") {
+          newskl += " (" + getRand(aklist) + ")";
+        } else if (newskl == "Language") {
+          newskl += " (" + getRand(langlist) + ")";
+        }
+        if (skills.containsKey(newskl)) { // If the skill is already there
+          if (skills[newskl] < 6) {       // And it's under the maximum
+            skills[newskl] += 1;          // Add 1 to it
+            spent += 1;
+          }
+        } else {                          // Otherwise, set it to 1-3
+          num amt = rng.nextInt(3) + 1;
+          skills[newskl] = amt;
+          spent += amt;
+        }
+        // Spend CP only if the skill was actually assigned
+      } else if (styp < 14) { // 9-13 assigns a Song
         // Songs - not implemented yet
-      } else {
+      } else { // 14 assigns an attunement
         // Attunements
         num atyp = rng.nextInt(3);
         String newattn = "";
@@ -115,7 +168,7 @@ class Character {
             nacb = cb;
           }
           newattn = "$nacb of $naword";
-        } while (attunements.contains(newattn));
+        } while (attunements.contains(newattn)); // make sure we don't add the same attunement twice
         attunements.add(newattn);
         spent += 5;
       }
@@ -137,8 +190,8 @@ class Character {
   }
 
   void addChar(String realm) {
-    var rnd = new Random();
-    num wc = rnd.nextInt(2);
+    //var rnd = new Random();
+    num wc = rng.nextInt(2);
     if (attributes[realm][wc] == 12) {
       attributes[realm][1-wc] += 1;
     } else {
@@ -149,7 +202,8 @@ class Character {
 // If prt is True, print the output before returning it
   String output([bool prt]) {
     String out = "";
-    out += "$cb of $word";
+    out += "$name";
+    out += "$lb$cb of $word";
     out += "$lb${forces['Corporeal']} Corporeal$tb${forces['Ethereal']} Ethereal$tb${forces['Celestial']} Celestial";
     out += "$lb${attributes['Corporeal'][0]} Strength$tb${attributes['Ethereal'][0]} Intellect$tb${attributes['Celestial'][0]} Will";
     out += "$lb${attributes['Corporeal'][1]} Agility$tb${attributes['Ethereal'][1]} Precision$tb${attributes['Celestial'][1]} Perception";
@@ -160,7 +214,7 @@ class Character {
     sklslist.sort();
     out += sklslist.join(", ");
     out += "${lb}Attunements: " + attunements.join(", ");
-    out += "$lb$lb${cp-spent} character points remaining";
+    out += "$lb$lb${maxcp-spent} character points remaining";
     if (prt) { print(out); }
     return out;
   }
