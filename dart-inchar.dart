@@ -26,6 +26,14 @@ Map types = {
               }
             };
 
+Map skillslist = {"Corporeal": ["Acrobatics","Climbing","Dodge","Escape","Fighting","Large Weapon","Move Silently","Running","Swimming","Throwing"],
+                  "Ethereal": ["Knowledge","Knowledge","Knowledge","Area Knowledge","Area Knowledge","Area Knowledge","Chemistry","Computer Operation","Driving","Electronics","Engineering","Language","Lockpicking","Lying","Medicine","Ranged Weapon","Savoir-Faire","Small Weapon","Tactics"],
+                  "Celestial": ["Artistry","Detect Lies","Emote","Fast-Talk","Seduction","Singing","Survival","Tracking"]};
+
+List aklist = ["Heaven","Hell","Marches","Caribbean","New York","New England","Florida","Atlanta","Texas","California","American Southwest","Pacific Northwest","Portland","Toronto","Vancouver","Mexico","Central America","Brazil","Argentina","England","London","France","Paris","Norway","Scandinavia","Greece","Egypt","North Africa","Sub-Saharan Africa","Saudi Arabia","Middle East","Russia","Moscow","China","Shanghai","Hong Kong","Japan","Hokkaido","Tokyo","Australia","Sydney","Melbourne","Perth","Fiji","Antarctica"];
+List knowlist = ["Astronomy","Biology","Literature","Aircraft","American Football","Football","Baseball","Sumo","Giant Robot Anime","German Cuisine","Catholicism","Islam","Buddhism","Shinto","Architecture","Eschatology","Numinology","Role-Playing Games","Spelunking","Parliamentary Procedure","Olympic History","18th-Century Botanical Manuals","Photography","Marine Biology","Entomology","Archaeology"];
+List langlist = ["Mandarin","Spanish","English","Hindi","Arabic","Portuguese","Bengali","Russian","Japanese","Punjabi","German","Javanese","Wu","Malay","Telugu","Vietnamese","Korean","French","Marathi","Tamil","Urdu","Turkish","Italian","Yue (Cantonese)", "Thai", "Latin", "Greek", "Ancient Egyptian", "Apache", "Ainu", "Aleut", "Inuit", "Mayan"];
+
 //
 // Global functions
 //
@@ -58,13 +66,19 @@ class Character {
   Map attributes = {"Corporeal": [1,1], "Ethereal": [1,1], "Celestial": [1,1]};
   Map skills = {};
   List attunements = [];
-  num cp = 36;
   num fcs = 6;
+  num maxcp;
+  num cp;
+  num spent = 0;
 
   Character() {
+    var rng = new Random();
     String typ = getRand(["angel","demon"]);
+    maxcp = (fcs + 3) * 4;
+    cp = maxcp;
     cb = getRand(types[typ]["cb"]);
     word = getRand(types[typ]["words"]);
+    attunements.add("${cb} of ${word}");
     var i = 0;
     while (i < fcs) {
       i += addForce() ? 1 : 0;
@@ -74,6 +88,39 @@ class Character {
         addChar(el);
       }
     });
+    num skilldelta = (cp*0.33).floor() - 1;
+    num skillpoints = cp - (skilldelta + rng.nextInt((skilldelta*1.25).floor() - skilldelta));
+    while (spent < skillpoints) {
+      num styp = rng.nextInt(15);
+      if (styp < 8) {
+        // Skills
+        
+        spent += 1;
+      } else if (styp < 12) {
+        // Songs - not implemented yet
+      } else {
+        // Attunements
+        num atyp = rng.nextInt(3);
+        String newattn = "";
+        String nacb;
+        String naword;
+        do {
+          if (atyp < 2) {
+            // Same superior, different choir/band
+            nacb = getRand(types[typ]["cb"]);
+            naword = word;
+          } else {
+            // Same choir/band, different superior
+            naword = getRand(types[typ]["words"]);
+            nacb = cb;
+          }
+          newattn = "$nacb of $naword";
+        } while (attunements.contains(newattn));
+        attunements.add(newattn);
+        spent += 5;
+      }
+    }
+
   }
 
   bool addForce([String realm]) {
@@ -113,7 +160,7 @@ class Character {
     sklslist.sort();
     out += sklslist.join(", ");
     out += "${lb}Attunements: " + attunements.join(", ");
-    out += "$lb$lb$cp character points remaining";
+    out += "$lb$lb${cp-spent} character points remaining";
     if (prt) { print(out); }
     return out;
   }
