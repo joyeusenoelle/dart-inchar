@@ -14,6 +14,8 @@ import 'dart:mirrors';
 String lb = "\n";
 String tb = "\t";
 
+List realmlist = ["Corporeal", "Ethereal", "Celestial"];
+
 Map types = {
               "angel":{
                 "cb":["Seraph","Cherub","Ofanite","Elohite","Malakite","Kyriotate","Mercurian"],
@@ -67,18 +69,33 @@ class Character {
     while (i < fcs) {
       i += addForce() ? 1 : 0;
     }
+    realmlist.forEach( (el) {
+      for (var j = 0; j < (forces[el] * 4) - 2; j++) {
+        addChar(el);
+      }
+    });
   }
 
   bool addForce([String realm]) {
     String realm;
     if (!realm) {
-      realm = getRand(["Corporeal","Ethereal","Celestial"]);
+      realm = getRand(realmlist);
     }
     if (forces[realm] == 6) {
       return false;
     } else {
       forces[realm] += 1;
       return true;
+    }
+  }
+
+  void addChar(String realm) {
+    var rnd = new Random();
+    num wc = rnd.nextInt(2);
+    if (attributes[realm][wc] == 12) {
+      attributes[realm][1-wc] += 1;
+    } else {
+      attributes[realm][wc] += 1;
     }
   }
 
