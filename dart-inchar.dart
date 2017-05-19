@@ -11,13 +11,17 @@ import 'dart:mirrors';
 // Initialize global variables
 //
 
-var rng = new Random();
+var rng = new Random(); // global random number generator
 
+// This seems ridiculous, but there will be times when I want
+// to change these at runtime
 String lb = "\n";
 String tb = "\t";
 
+// Easier than doing it in the body of the code
 List realmlist = ["Corporeal", "Ethereal", "Celestial"];
 
+// Lists of things a character can be or do
 Map types = {
               "angel":{
                 "cb":["Seraph","Cherub","Ofanite","Elohite","Malakite","Kyriotate","Mercurian"],
@@ -36,13 +40,20 @@ List aklist = ["Heaven","Hell","Marches","Caribbean","New York","New England","F
 List knowlist = ["Astronomy","Biology","Literature","Aircraft","American Football","Football","Baseball","Sumo","Giant Robot Anime","German Cuisine","Catholicism","Islam","Buddhism","Shinto","Architecture","Eschatology","Numinology","Role-Playing Games","Spelunking","Parliamentary Procedure","Olympic History","18th-Century Botanical Manuals","Photography","Marine Biology","Entomology","Archaeology"];
 List langlist = ["Mandarin","Spanish","English","Hindi","Arabic","Portuguese","Bengali","Russian","Japanese","Punjabi","German","Javanese","Wu","Malay","Telugu","Vietnamese","Korean","French","Marathi","Tamil","Urdu","Turkish","Italian","Yue (Cantonese)", "Thai", "Latin", "Greek", "Ancient Egyptian", "Apache", "Ainu", "Aleut", "Inuit", "Mayan"];
 
+List songslist = ["Attraction","Charm","Dreams","Entropy","Form","Harmony","Healing","Motion","Numinous Corpus","Possession","Projection","Shields","Thunder","Tongues"];
+
+Map breakpoints = { "max":         15,
+                    "skills":       9,
+                    "songs":       13,
+                    "attunements": 14
+                  };
+
 //
 // Global functions
 //
 
 // Returns a random element from the supplied array
 List getRand(List ary) {
-  //var aryrng = new Random();
   return ary[rng.nextInt(ary.length)];
 }
 
@@ -88,13 +99,13 @@ class Character {
   Map forces = {"Corporeal": 1, "Ethereal": 1, "Celestial": 1};
   Map attributes = {"Corporeal": [1,1], "Ethereal": [1,1], "Celestial": [1,1]};
   Map skills = {};
+  Map songs = {};
   List attunements = [];
   num fcs = 6;
   num maxcp;
   num spent = 0;
 
   Character() {
-    //var rng = new Random();
     String typ = getRand(["angel","demon"]);
     maxcp = (fcs + 3) * 4;
     name = rName();
@@ -120,8 +131,8 @@ class Character {
     num skilldelta = (maxcp*0.33).floor() - 1;
     num skillpoints = maxcp - (skilldelta + rng.nextInt((skilldelta*1.25).floor() - skilldelta));
     while (spent < skillpoints) {
-      num styp = rng.nextInt(15);
-      if (styp < 8) { // 0-8 assigns a skill
+      num styp = rng.nextInt(breakpoints["max"]);
+      if (styp < breakpoints["skills"]) {
         // Skills
         // Use the weighted list of realms to select skills
         // This helps ensure skills tend to be usable by the character
@@ -149,16 +160,28 @@ class Character {
           spent += amt;
         }
         // Spend CP only if the skill was actually assigned
-      } else if (styp < 14) { // 9-13 assigns a Song
-        // Songs - not implemented yet
+      } else if (styp < breakpoints["songs"]) {
+        // Songs
+        String newsong = getRand(songslist);
+        if (!["Numinous Corpus","Thunder"].contains(newsong)) {
+          newsong += " (" + getRand(sklselect) + ")";
+        }
+        if (songs.containsKey(newsong)) {
+          songs[newsong] += 1;
+          spent += 1;
+        } else {
+          num amt = rng.nextInt(3) + 1;
+          songs[newsong] = amt;
+          spent += amt;
+        }
       } else { // 14 assigns an attunement
         // Attunements
-        num atyp = rng.nextInt(3);
+        num atyp = rng.nextInt(4);
         String newattn = "";
         String nacb;
         String naword;
         do {
-          if (atyp < 2) {
+          if (atyp < 3) {
             // Same superior, different choir/band
             nacb = getRand(types[typ]["cb"]);
             naword = word;
@@ -213,6 +236,11 @@ class Character {
     skls.forEach( (el) => sklslist.add("$el/${skills[el]}") );
     sklslist.sort();
     out += sklslist.join(", ");
+    List sngs = songs.keys;
+    List sngslist = [];
+    sngs.forEach( (el) => sngslist.add("$el/${songs[el]}") );
+    sngslist.sort();
+    out += "${lb}Songs: " + sngslist.join(", ");
     out += "${lb}Attunements: " + attunements.join(", ");
     out += "$lb$lb${maxcp-spent} character points remaining";
     if (prt) { print(out); }
