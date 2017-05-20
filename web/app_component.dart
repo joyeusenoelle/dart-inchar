@@ -5,7 +5,7 @@
 // Imports
 //
 import 'dart:math';
-import 'dart:mirrors';
+//import 'dart:mirrors';
 import 'package:angular2/angular2.dart';
 
 //
@@ -97,6 +97,10 @@ class Character {
   String name;
   String cb;
   String word;
+  String typ;
+  String sklist;
+  String snlist;
+  String atlist;
   Map forces = {"Corporeal": 1, "Ethereal": 1, "Celestial": 1};
   Map attributes = {"Corporeal": [1,1], "Ethereal": [1,1], "Celestial": [1,1]};
   Map skills = {};
@@ -107,13 +111,19 @@ class Character {
   num spent = 0;
 
   Character() {
-    String typ = getRand(["angel","demon"]);
-    maxcp = (fcs + 3) * 4;
-    name = rName();
-    cb = getRand(types[typ]["cb"]);
-    word = getRand(types[typ]["words"]);
-    attunements.add("${cb} of ${word}"); // Everyone gets this for free
-    skills["Language (Local)"] = 3; // Everyone gets this for free
+    this.create();
+  }
+
+  void create() {
+    this.typ = getRand(["angel","demon"]);
+    this.maxcp = (fcs + 3) * 4;
+    this.name = rName();
+    this.cb = getRand(types[typ]["cb"]);
+    this.word = getRand(types[typ]["words"]);
+    this.attunements.add("${cb} of ${word}"); // Everyone gets this for free
+    this.skills["Language (Local)"] = 3; // Everyone gets this for free
+    this.songs = songs;
+    this.attributes = attributes;
     List sklselect = [];
     var i = 0;
     while (i < fcs) {
@@ -139,7 +149,7 @@ class Character {
         // This helps ensure skills tend to be usable by the character
         String newskl = getRand(skillslist[getRand(sklselect)]);
         // Seraphim and Balseraphs can't have Lying
-        if ((cb == "Seraph" || cb == "Balseraph") && newskl == "Lying") {
+        if ((this.cb == "Seraph" || this.cb == "Balseraph") && newskl == "Lying") {
           continue;
         }
         // Assign specializations
@@ -150,15 +160,15 @@ class Character {
         } else if (newskl == "Language") {
           newskl += " (" + getRand(langlist) + ")";
         }
-        if (skills.containsKey(newskl)) { // If the skill is already there
-          if (skills[newskl] < 6) {       // And it's under the maximum
-            skills[newskl] += 1;          // Add 1 to it
-            spent += 1;
+        if (this.skills.containsKey(newskl)) { // If the skill is already there
+          if (this.skills[newskl] < 6) {       // And it's under the maximum
+            this.skills[newskl] += 1;          // Add 1 to it
+            this.spent += 1;
           }
         } else {                          // Otherwise, set it to 1-3
           num amt = rng.nextInt(3) + 1;
-          skills[newskl] = amt;
-          spent += amt;
+          this.skills[newskl] = amt;
+          this.spent += amt;
         }
         // Spend CP only if the skill was actually assigned
       } else if (styp < breakpoints["songs"]) {
@@ -167,12 +177,12 @@ class Character {
         if (!["Numinous Corpus","Thunder"].contains(newsong)) {
           newsong += " (" + getRand(sklselect) + ")";
         }
-        if (songs.containsKey(newsong)) {
-          songs[newsong] += 1;
+        if (this.songs.containsKey(newsong)) {
+          this.songs[newsong] += 1;
           spent += 1;
         } else {
           num amt = rng.nextInt(3) + 1;
-          songs[newsong] = amt;
+          this.songs[newsong] = amt;
           spent += amt;
         }
       } else { // 14 assigns an attunement
@@ -193,22 +203,36 @@ class Character {
           }
           newattn = "$nacb of $naword";
         } while (attunements.contains(newattn)); // make sure we don't add the same attunement twice
-        attunements.add(newattn);
-        spent += 5;
+        this.attunements.add(newattn);
+        this.spent += 5;
       }
     }
-
+    this.sklist = "";
+    List skls = this.skills.keys;
+    List sklslist = [];
+    skls.forEach( (el) => sklslist.add("$el/${skills[el]}") );
+    sklslist.sort();
+    this.sklist += sklslist.join(", ");
+    this.snlist = "";
+    List sngs = this.songs.keys;
+    List sngslist = [];
+    sngs.forEach( (el) => sngslist.add("$el/${songs[el]}") );
+    sngslist.sort();
+    this.snlist += sngslist.join(", ");
+    this.atlist = this.attunements.join(", ");
   }
 
-  bool addForce([String realm]) {
+  bool addForce([String rlm]) {
     String realm;
-    if (!realm) {
+    if (rlm == null) {
       realm = getRand(realmlist);
+    } else {
+      realm == rlm;
     }
-    if (forces[realm] == 6) {
+    if (this.forces[realm] == 6) {
       return false;
     } else {
-      forces[realm] += 1;
+      this.forces[realm] += 1;
       return true;
     }
   }
@@ -216,34 +240,34 @@ class Character {
   void addChar(String realm) {
     //var rnd = new Random();
     num wc = rng.nextInt(2);
-    if (attributes[realm][wc] == 12) {
-      attributes[realm][1-wc] += 1;
+    if (this.attributes[realm][wc] == 12) {
+      this.attributes[realm][1-wc] += 1;
     } else {
-      attributes[realm][wc] += 1;
+      this.attributes[realm][wc] += 1;
     }
   }
 
 // If prt is True, print the output before returning it
   String output([bool prt]) {
     String out = "";
-    out += "$name";
-    out += "$lb$cb of $word";
-    out += "$lb${forces['Corporeal']} Corporeal$tb${forces['Ethereal']} Ethereal$tb${forces['Celestial']} Celestial";
-    out += "$lb${attributes['Corporeal'][0]} Strength$tb${attributes['Ethereal'][0]} Intellect$tb${attributes['Celestial'][0]} Will";
-    out += "$lb${attributes['Corporeal'][1]} Agility$tb${attributes['Ethereal'][1]} Precision$tb${attributes['Celestial'][1]} Perception";
+    out += "${this.name}";
+    out += "$lb${this.cb} of ${this.word}";
+    out += "$lb${this.forces['Corporeal']} Corporeal$tb${this.forces['Ethereal']} Ethereal$tb${this.forces['Celestial']} Celestial";
+    out += "$lb${this.attributes['Corporeal'][0]} Strength$tb${this.attributes['Ethereal'][0]} Intellect$tb${this.attributes['Celestial'][0]} Will";
+    out += "$lb${this.attributes['Corporeal'][1]} Agility$tb${this.attributes['Ethereal'][1]} Precision$tb${this.attributes['Celestial'][1]} Perception";
     out += "$lb${lb}Skills: ";
-    List skls = skills.keys;
+    List skls = this.skills.keys;
     List sklslist = [];
     skls.forEach( (el) => sklslist.add("$el/${skills[el]}") );
     sklslist.sort();
     out += sklslist.join(", ");
-    List sngs = songs.keys;
+    List sngs = this.songs.keys;
     List sngslist = [];
     sngs.forEach( (el) => sngslist.add("$el/${songs[el]}") );
     sngslist.sort();
     out += "${lb}Songs: " + sngslist.join(", ");
-    out += "${lb}Attunements: " + attunements.join(", ");
-    out += "$lb$lb${maxcp-spent} character points remaining";
+    out += "${lb}Attunements: " + this.attunements.join(", ");
+    out += "$lb$lb${this.maxcp-this.spent} character points remaining";
     if (prt) { print(out); }
     return out;
   }
@@ -256,14 +280,46 @@ class Character {
 // which are space-separated on the command line
 //
 
-/*void main(List<String> args) {
-  parseArgs(args);
+//void main(List<String> args) {
+//  parseArgs(args);
   var chr = new Character();
-  chr.output(true);
-}*/
+//  var charout = chr.output(false);
+//}
 
-@Component(selector: 'my-app', template: '{{charout}}')
+
+
+@Component(selector: 'my-app', template: '''<h2>{{chr.name}}</h2>
+<h3>{{chr.cb}} of {{chr.word}}</h3>
+<table border=0>
+  <tr>
+    <th>Corporeal</th>
+    <th>Ethereal</th>
+    <th>Celestial</th>
+  </tr>
+  <tr>
+    <td>Forces: {{chr.forces['Corporeal']}}</td>
+    <td>Forces: {{chr.forces['Ethereal']}}</td>
+    <td>Forces: {{chr.forces['Celestial']}}</td>
+  </tr>
+  <tr>
+    <td>Strength: {{chr.attributes['Corporeal'][0]}}</td>
+    <td>Intellect: {{chr.attributes['Ethereal'][0]}}</td>
+    <td>Will: {{chr.attributes['Celestial'][0]}}</td>
+  </tr>
+  <tr>
+  <td>Agility: {{chr.attributes['Corporeal'][1]}}</td>
+  <td>Precision: {{chr.attributes['Ethereal'][1]}}</td>
+  <td>Perception: {{chr.attributes['Celestial'][1]}}</td>
+  </tr>
+</table>
+<br>
+<div class="list"><strong>Skills:</strong> {{chr.sklist}}</div>
+<div class="list"><strong>Songs:</strong> {{chr.snlist}}</div>
+<div class="list"><strong>Attunements:</strong> {{chr.atlist}}</div>
+<div class="list">{{chr.maxcp-chr.spent}} character points remaining</div>
+''')
 class AppComponent {
-  var chr = new Character();
-  var charout = chr.output(false);
+  //var charout = chr.output(false);
+  Character chr = new Character();
+  //String charout = chr.output();//"Hello website";
 }
